@@ -26,15 +26,64 @@ CREATE TABLE usuarios(
 	id UUID NOT NULL DEFAULT gen_random_uuid(),
 	first_name VARCHAR(100) NOT NULL,
 	last_name VARCHAR(100) NOT NULL,
-	email VARCHAR(250) NOT NULL,
+	email VARCHAR(250) NOT NULL UNIQUE,
 	last_location INET NOT NULL,
 	country VARCHAR(50) NOT NULL,
 	blog VARCHAR(100) NOT NULL,
-	username VARCHAR(50) NOT NULL, 
+	username VARCHAR(50) NOT NULL UNIQUE, 
 	followers INT4 NOT NULL,
 	following INTEGER NOT NULL
 );
 
+CREATE TYPE rol AS ENUM ('usuario', 'admin');
+-- DROP TABLE credenciales8;
+
+CREATE TABLE credenciales(
+	username VARCHAR(100),
+	password TEXT NOT NULL,
+	user_rol rol NOT NULL
+);
+
+-- Alterar la tabla de credenciales para añadir a username primary key 
+
+ALTER TABLE credenciales ADD PRIMARY KEY(username);
+
+-- Alterar la tabla credenciales para añadir una llave foranea
+
+ALTER TABLE credenciales ADD CONSTRAINT fk_constraint FOREIGN KEY (username) REFERENCES credenciales(username);
+
+-- Mostrar todos los username de la tabla usuarios
+
+SELECT username FROM usuarios;
+
+INSERT INTO credenciales(username, password, user_rol)
+SELECT username, 'password' AS passsword, 'usuario' AS rol FROM usuarios;
+
+SELECT * FROM credenciales;
+
+CREATE TABLE integrante(
+	id SERIAL PRIMARY KEY,
+	nombre VARCHAR(30) NOT NULL,
+	edad SMALLINT NOT NULL CHECK( edad > 9)
+);
+
+-- Agragar check con alter table.
+-- ALTER TABLE integrante ADD CONSTRAINT check_edad CHECK (edad > 9);
+
+INSERT INTO integrante (nombre, edad) VALUES ('Rafael', 11);
+INSERT INTO integrante (nombre, edad) VALUES ('Pedrito', 8);
+
+SELECT * FROM integrante;
+
+CREATE OR REPLACE FUNCTION ramdom_string(int) RETURNS TEXT AS $$
+	SELECT string_agg(SUBSTRING ('0123456789bcdfghjklmnpqrstvwz', ROUND(RANDOM() * 30) :: integer,1), '') FROM generate_series(1, $1);
+$$ LANGUAGE SQL;
+
+SELECT string_agg(SUBSTRING('0123456789abcdefghijklmnopqrstuvwz$.!', ROUND(RANDOM() * LENGTH ('0123456789abcdefghijklmnopqrstuvwz$.!')) :: INTEGER,1), '') as NewPassword
+FROM generate_series(0,5);
+
+SELECT generate_series(1,10);
+SELECT ROUND(RANDOM() * 40) * 100, LENGTH('0123456789abcdefghijklmnopqrstuvwz$.!');
 INSERT INTO ejemplo VALUES (1, 'Adrian', 'description', 10.23, true, '2024-02-23', '13:10:50', '2024-02-23 13:10:50', '2024-02-23 13:10:50+05', '1 day', 
 '192.168.1.1', '80:00:12:23:10:00', '(10, 20)', '{"key" : "value"}', 'f66c844a-fd5b-48c3-8c46-735e41b0a2e6', '15.23', '[10, 20)', 
 ARRAY['rojo', 'verde', 'azul', 'amarillo'], 'Masculino');
@@ -522,3 +571,63 @@ INSERT INTO usuarios (first_name,last_name,email, last_location, country, blog, 
 ('Patrick','Carter','patrick.carter@orokeg.fi','62.234.173.164','Falkland Islands','http://ibocuvel.cc/jose','gentle24',1372,17516),
 ('Kevin','Byrd','kevin.byrd@tiwilaes.th','207.87.235.87','Gibraltar','http://tat.sv/mup','skin16',2474,19040),
 ('Troy','Ross','troy.ross@gog.am','165.233.187.24','Tonga','http://zu.cu/ad','edge85',30,16279);
+
+-- FUNCION
+
+create function generate_ramdon_password(long INTEGER)
+returns TABLE(password TEXT) as $$
+BEGIN
+	return query SELECT string_agg(SUBSTRING('0123456789abcdefghijklmnñopqrstuvwxyz$.!', round(random() * length('0123456789abcdefghijklmnñopqrstuvwxyz$.!'))::integer, 1), '') as NewPassword 
+	FROM generate_series(0, long);-- les queda para revisar.
+END;
+$$ Language plpgsql;
+
+drop function generate_ramdon_password;
+
+CREATE FUNCTION sumar(n1 INTEGER, n2 INTEGER)
+RETURNS INTEGER as $$
+BEGIN
+	RETURN n1 + n2;
+END
+$$ LANGUAGE plpgsql;
+
+SELECT sumar (10,5);
+
+
+create function generate_ramdon_password1(long INTEGER)
+returns TEXT as $$ 
+declare ramdon TEXT;
+BEGIN
+	ramdon= ( SELECT string_agg(SUBSTRING('0123456789abcdefghijklmnñopqrstuvwxyz$.!', round(random() * length('0123456789abcdefghijklmnñopqrstuvwxyz$.!'))::integer, 1), '') as NewPassword 
+	FROM generate_series(0, long));
+	return ramdon;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT generate_ramdon_password1(3);
+
+SELECT md5(password:: bytea), username FROM credenciales;
+
+ALTER TABLE credenciales ADD COLUMN password_sha bytea NULL;
+
+SELECT * FROM credenciales WHERE username = 'brush99';
+-- Actualizar la contraseña de un username de forma aleatoria
+
+SELECT * FROM credenciales WHERE username = 'brush99';
+
+UPDATE credenciales SET password_sha = sha512(password::bytea);
+
+-- retorna los datos del username especifico 
+SELECT * FROM credenciales WHERE sha512('g.ñfwtat7cg7y'::bytea) = password_sha AND username = 'brush99';
+
+UPDATE credenciales SET password = generate_ramdon_password1(12) WHERE username = 'brush99';
+
+-- Actualizar todos los password de los username 
+
+UPDATE credenciales SET password = generate_ramdon_password1(12);
+SELECT * FROM credenciales;
+
+-- los tipos de consultas que maneja el sql
+-- tipo de lenguaje hay para sql
+-- DML sql postgreSQL
+-- Lenguajes de sql se dividen en cuatro categorias investigar todo 
